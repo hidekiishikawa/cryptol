@@ -41,6 +41,7 @@ library
   Default-language:
     Haskell98
   Build-depends:       base            >= 4.6 && < 5,
+                       bytestring      >= 0.10,
                        array           >= 0.4,
                        async           >= 2.0,
                        containers      >= 0.5,

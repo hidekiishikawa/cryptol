@@ -37,12 +37,13 @@ import Cryptol.Transform.MonoValues
 import Control.DeepSeq
 import qualified Control.Exception as X
 import Control.Monad (unless)
+
+import qualified Data.ByteString.Lazy as BS
 import Data.Function (on)
 import Data.List (nubBy)
 import Data.Maybe (mapMaybe,fromMaybe)
 import Data.Monoid ((<>))
-import           Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text.Lazy.Encoding as T
 import System.Directory (doesFileExist)
 import System.FilePath ( addExtension
                        , isAbsolute
@@ -113,18 +114,21 @@ parseModule :: FilePath -> ModuleM P.Module
 parseModule path = do
 
   e <- io $ X.try $ do
-    bytes <- T.readFile path
+    bytes <- BS.readFile path
     return $!! bytes
-  bytes <- case (e :: Either X.IOException Text) of
+  bytes <- case (e :: Either X.IOException BS.ByteString) of
     Right bytes -> return bytes
     Left exn | IOE.isDoesNotExistError exn -> cantFindFile path
              | otherwise                   -> otherIOError path exn
+  txt <- case T.decodeUtf8' bytes of
+    Right txt -> return txt
+    Left exn -> unicodeError path exn
 
   let cfg = P.defaultConfig
               { P.cfgSource  = path
               , P.cfgPreProc = P.guessPreProc path
               }
-  case P.parseModule cfg bytes of
+  case P.parseModule cfg txt of
     Right pm -> return pm
     Left err -> moduleParseError path err
 

@@ -28,6 +28,7 @@ import           Cryptol.Utils.PP
 import Control.Exception (IOException)
 import Data.Function (on)
 import Data.Maybe (isJust)
+import qualified Data.Text.Encoding.Error as T
 import MonadLib
 
 #if __GLASGOW_HASKELL__ < 710
@@ -64,6 +65,8 @@ data ModuleError
     -- ^ Some other IO error occurred while reading this file
   | ModuleParseError FilePath Parser.ParseError
     -- ^ Generated this parse error when parsing the file for module m
+  | UnicodeError FilePath T.UnicodeException
+    -- ^ Problems when decoding UTF-8
   | RecursiveModules [ImportSource]
     -- ^ Recursive module group discovered
   | RenamerErrors ImportSource [RenamerError]
@@ -104,6 +107,11 @@ instance PP ModuleError where
          4 (text (show exn))
 
     ModuleParseError _source err -> Parser.ppError err
+
+    UnicodeError path exn ->
+      hang (text "[error]" <+>
+            text "Error decoding UTF-8 source file:" <+> text path <> colon)
+         4 (text (show exn))
 
     RecursiveModules mods ->
       hang (text "[error] module imports form a cycle:")
@@ -146,6 +154,9 @@ otherIOError path exn = ModuleT (raise (OtherIOError path exn))
 moduleParseError :: FilePath -> Parser.ParseError -> ModuleM a
 moduleParseError path err =
   ModuleT (raise (ModuleParseError path err))
+
+unicodeError :: FilePath -> T.UnicodeException -> ModuleM a
+unicodeError path exn = ModuleT (raise (UnicodeError path exn))
 
 recursiveModules :: [ImportSource] -> ModuleM a
 recursiveModules loaded = ModuleT (raise (RecursiveModules loaded))
