@@ -33,6 +33,7 @@ import System.Console.GetOpt
 import System.Environment (getArgs, getProgName, lookupEnv)
 import System.Exit (exitFailure)
 import System.FilePath (searchPathSeparator, splitSearchPath, takeDirectory)
+import System.IO (hSetEncoding, stdin, stdout, stderr)
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Monoid (mconcat)
@@ -152,6 +153,7 @@ displayHelp errs = do
 main :: IO ()
 main  = do
   setLocaleEncoding utf8
+  mapM_ (`hSetEncoding` utf8) [stdin, stdout, stderr]
   args <- getArgs
   case parseArgs args of
 
